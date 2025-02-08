@@ -1,7 +1,7 @@
 {
-  "name": "nodejs-typescript-eslint-template",
+  "name": "kpw-discord-join-message",
   "version": "1.0.0",
-  "description": "Robust TypeScript Template with eslint for Node.js",
+  "description": "かめぱわぁ～るどようこそメッセージ",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -33,6 +33,7 @@
     "typescript-eslint": "^8.0.0-alpha.13"
   },
   "dependencies": {
+    "discord.js": "^14.17.3",
     "log4js": "^6.9.1",
     "toml": "^3.0.0"
   }

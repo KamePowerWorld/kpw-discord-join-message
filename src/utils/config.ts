@@ -4,22 +4,23 @@ import { getWorkdirPath } from './workdir.js';
 import { copyFileSync, existsSync, readFileSync } from 'fs';
 
 /**
- * Structure of the configuration file
+ * TOML構成の設定ファイルに対応する型定義。
+ * 命名規則は snake_case とし、ESLint の naming-convention は一時的に無効化しています。
  */
 export interface Config {
-  /*
-   * Configuration names should be written in snake_case. Therefore, we are disabling eslint naming rules here.
-   * The 'requiresQuotes' rule is disabled here because it only excludes strings (including those with spaces) that need to be enclosed in quotes.
-   */
   /* eslint-disable @typescript-eslint/naming-convention */
-
-  /** Example of a string setting */
-  some_text_setting: string;
-
+  /** チャンネルID */
+  channel_id: string;
+  /** テンプレートチャンネルID */
+  template_channel_id: string;
+  /** テンプレートメッセージID */
+  template_message_id: string;
   /* eslint-enable @typescript-eslint/naming-convention */
 }
 
-// If config.toml does not exist, copy config.default.toml
+/**
+ * config.toml が存在しない場合は config.default.toml をコピーします。
+ */
 if (!existsSync(getWorkdirPath('config.toml'))) {
   copyFileSync(
     getWorkdirPath('config.default.toml'),
@@ -27,13 +28,30 @@ if (!existsSync(getWorkdirPath('config.toml'))) {
   );
 }
 
-/** Configuration */
+/**
+ * TOMLをパースして Config 型としてエクスポート
+ */
 export const config: Config = parse(
   readFileSync(getWorkdirPath('config.toml'), 'utf-8'),
 ) as Config;
 
-// Check the types
+/**
+ * 必要な設定値が型通りに存在するかアサートします。
+ */
+
 assert(
-  config.some_text_setting && typeof config.some_text_setting === 'string',
-  'some_text_setting is required.',
+  typeof config.channel_id === 'string' && config.channel_id.length > 0,
+  'channel_id is required and must be a non-empty string.',
+);
+
+assert(
+  typeof config.template_channel_id === 'string' &&
+    config.template_channel_id.length > 0,
+  'template_channel_id is required and must be a non-empty string.',
+);
+
+assert(
+  typeof config.template_message_id === 'string' &&
+    config.template_message_id.length > 0,
+  'template_message_id is required and must be a non-empty string.',
 );

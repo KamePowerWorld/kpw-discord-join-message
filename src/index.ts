@@ -1,23 +1,108 @@
-import { logger } from './utils/log.js';
+import {
+  Client,
+  GatewayIntentBits,
+  TextChannel,
+  Message,
+  GuildMember,
+} from 'discord.js';
+import { nowait } from './utils/utils.js';
 import { config } from './utils/config.js';
-import { sleep } from './utils/utils.js';
+import { logger } from './utils/log.js';
 
 /**
- * Main process
- * @returns Promise
+ * Bot クライアントを初期化。
+ * guildMemberAdd イベントを扱うので GuildMembers のIntentが必要です。
+ * @returns Bot クライアント
  */
-async function main(): Promise<void> {
-  // Output a log message on startup
-  logger.info('Hello, world! こんにちは、世界！ 你好，世界！ नमस्ते, दुनिया!');
+function createBotClient(): Client {
+  const client: Client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+    ],
+  });
 
-  // Wait for 1 second
-  await sleep(1000);
-
-  // Log an output
-  logger.info('Hello, world after 1 second!');
-
-  // Output the configuration
-  logger.info(`config.some_text_setting: ${config.some_text_setting}`);
+  return client;
 }
 
-void main();
+/**
+ * 新メンバーが参加したときの処理をセットアップします。
+ * @param client Discord.js Client
+ */
+function setupGuildMemberAddEvent(client: Client): void {
+  client.on(
+    'guildMemberAdd',
+    nowait(async (member: GuildMember): Promise<void> => {
+      try {
+        // 指定されたチャンネルを取得
+        const channel = member.guild.channels.cache.get(config.channel_id);
+        if (!channel || !(channel instanceof TextChannel)) {
+          logger.error(
+            '指定された channel_id がテキストチャンネルとして見つかりません。',
+          );
+          return;
+        }
+
+        // テンプレートメッセージを取得
+        const templateChannel = member.guild.channels.cache.get(
+          config.template_channel_id,
+        );
+        if (!templateChannel || !(templateChannel instanceof TextChannel)) {
+          logger.error(
+            '指定された template_channel_id がテキストチャンネルとして見つかりません。',
+          );
+          return;
+        }
+
+        const templateMessage: Message = await templateChannel.messages.fetch(
+          config.template_message_id,
+        );
+        if (!templateMessage) {
+          logger.error(
+            '指定された template_message_id に合致するメッセージが見つかりません。',
+          );
+          return;
+        }
+
+        // テンプレート本文を取得
+        const templateContent: string = templateMessage.content;
+
+        // メンション (例: <@123456789012345678>)
+        const mention: string = member.toString();
+
+        // ニックネーム(サーバーでの表示名)。設定が無い場合はユーザー名
+        const nickname: string = member.displayName;
+
+        // テンプレート中にプレースホルダーを仕込む例
+        // 例えば {userMention} や {userNickname} を置換
+        const finalMessage: string = templateContent
+          .replace('{userMention}', mention)
+          .replace('{userNickname}', nickname);
+
+        // チャンネルに送信
+        await channel.send(finalMessage);
+        logger.log('新規メンバーを歓迎しました:', member.user.tag);
+      } catch (error: unknown) {
+        logger.error('guildMemberAdd イベント内でエラーが発生しました:', error);
+      }
+    }),
+  );
+}
+
+/**
+ * メイン処理を実行する関数
+ */
+const client: Client = createBotClient();
+
+// Bot が準備完了した際に呼ばれる
+client.once('ready', () => {
+  logger.log(`Bot ログイン完了: ${client.user?.tag ?? 'UnknownUser'}`);
+});
+
+// guildMemberAdd イベント処理をセットアップ
+setupGuildMemberAddEvent(client);
+
+// Bot にログイン
+await client.login(process.env.DISCORD_TOKEN);

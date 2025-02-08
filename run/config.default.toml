@@ -1,4 +1,6 @@
-# Example of string setting
-some_text_setting = "setting 設定 设置 सेटिंग"
+# チャンネルID
+channel_id = "XXXXX"
 
-# ↓ Add your settings here
+# テンプレートメッセージID
+template_channel_id = "XXXXX"
+template_message_id = "XXXXX"
